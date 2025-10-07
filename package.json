@@ -1,0 +1,13 @@
+{
+  "name": "whatsapp-cron-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp kanal gönderi tarayıcı botu",
+  "main": "cron_crawler.js",
+  "scripts": {
+    "start": "node cron_crawler.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "cheerio": "^1.0.0-rc.12"
+  }
+}
