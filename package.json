@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "WhatsApp kanal gönderi tarayıcı botu",
   "main": "cron_crawler.js",
+  "type": "module",
   "scripts": {
     "start": "node cron_crawler.js"
   },
