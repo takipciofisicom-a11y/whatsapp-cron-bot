@@ -21,11 +21,8 @@ try {
 
   const page = await browser.newPage();
   await page.goto(channelUrl, { waitUntil: "networkidle2", timeout: 60000 });
-
-  // Sayfa içeriği tam yüklensin
   await page.waitForTimeout(5000);
 
-  // Gönderi linklerini al
   const posts = await page.evaluate(() => {
     const anchors = Array.from(document.querySelectorAll("a"));
     const links = anchors
