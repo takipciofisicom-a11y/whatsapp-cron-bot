@@ -1,4 +1,5 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import axios from "axios";
 
 const channelUrl = process.env.CHANNEL_URL;
@@ -9,10 +10,15 @@ console.log(`=== CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
 console.log(`🔍 Kanal taranıyor: ${channelUrl}`);
 
 try {
+  const executablePath = await chromium.executablePath();
+
   const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
+    executablePath,
+    headless: chromium.headless,
   });
+
   const page = await browser.newPage();
   await page.goto(channelUrl, { waitUntil: "networkidle2", timeout: 60000 });
 
