@@ -16,10 +16,16 @@ try {
   const page = await browser.newPage();
   await page.goto(channelUrl, { waitUntil: "networkidle2", timeout: 60000 });
 
-  // Gönderi linklerini çek
+  // Sayfa içeriği tam yüklensin
+  await page.waitForTimeout(5000);
+
+  // Gönderi linklerini al
   const posts = await page.evaluate(() => {
-    const anchors = Array.from(document.querySelectorAll("a[href*='/channel/']"));
-    return anchors.map(a => a.href).filter((v, i, arr) => arr.indexOf(v) === i);
+    const anchors = Array.from(document.querySelectorAll("a"));
+    const links = anchors
+      .map(a => a.href)
+      .filter(href => href.includes("/post/"));
+    return [...new Set(links)];
   });
 
   console.log(`📦 ${posts.length} gönderi bulundu.`);
