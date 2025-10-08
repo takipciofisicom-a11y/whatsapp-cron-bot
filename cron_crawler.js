@@ -1,62 +1,48 @@
+import puppeteer from "puppeteer";
 import axios from "axios";
-import * as cheerio from "cheerio";
 
-const PUSH_URL = process.env.PUSH_URL || "https://wpkanal.site/push_post.php";
-const CHANNELS = [
-  "https://www.whatsapp.com/channel/0029VbBP35F0VycEVdmqmN3w"
-];
+const channelUrl = process.env.CHANNEL_URL;
+const pushUrl = process.env.PUSH_URL;
+const pushKey = process.env.PUSH_KEY;
 
-async function scanChannel(url) {
-  console.log(`🔍 Kanal taranıyor: ${url}`);
-  try {
-    const res = await axios.get(url);
-    console.log("📄 Sayfa içeriği (ilk 1000 karakter):", res.data.substring(0,1000));
-    const $ = cheerio.load(res.data);
-    const posts = []; // ✅ Tanımlama buraya taşındı
+console.log(`=== CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
+console.log(`🔍 Kanal taranıyor: ${channelUrl}`);
 
-    $("a[href*='/channel/']").each((_, el) => {
-      const link = $(el).attr("href");
-      if (link && link.startsWith("/channel/")) {
-        posts.push(`https://www.whatsapp.com${link}`);
-      }
-    });
+try {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  const page = await browser.newPage();
+  await page.goto(channelUrl, { waitUntil: "networkidle2", timeout: 60000 });
 
-    if (posts.length === 0) {
-      console.log(`⚠️ Gönderi bulunamadı: ${url}`);
-      return;
-    }
+  // Gönderi linklerini çek
+  const posts = await page.evaluate(() => {
+    const anchors = Array.from(document.querySelectorAll("a[href*='/channel/']"));
+    return anchors.map(a => a.href).filter((v, i, arr) => arr.indexOf(v) === i);
+  });
 
-    console.log(`🟢 ${posts.length} gönderi bulundu.`);
+  console.log(`📦 ${posts.length} gönderi bulundu.`);
+  await browser.close();
 
-    // Her gönderiyi PHP'ye pushla
-    for (const p of posts) {
+  if (posts.length === 0) {
+    console.log(`⚠️ Hiç gönderi bulunamadı.`);
+  } else {
+    for (const link of posts) {
       try {
-        const pushRes = await axios.post(PUSH_URL, {
-          key: "3424342343423efwefsddwedwerwerwefedsfsdf", // config.php ile aynı olmalı
-          external_id: p,
-          channel: url,
-          content: "auto-fetched"
-        });
-        console.log(`📤 Push sonucu (${p}):`, JSON.stringify(pushRes.data));
-      } catch (pushErr) {
-        console.log(`❌ Push hatası (${p}):`, pushErr.message);
+        const res = await axios.post(pushUrl, new URLSearchParams({
+          key: pushKey,
+          external_id: link,
+          channel: channelUrl
+        }));
+        console.log(`✅ Push gönderildi: ${link} -> ${res.status}`);
+      } catch (err) {
+        console.log(`❌ Push hatası (${link}): ${err.response?.status || err.message}`);
       }
     }
-
-  } catch (err) {
-    console.log(`⚠️ Kanal içeriği alınamadı: ${url}`, err.message);
   }
+} catch (err) {
+  console.error(`💥 Hata oluştu: ${err.message}`);
 }
 
-async function main() {
-  console.log(`=== CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
-  for (const ch of CHANNELS) {
-    await scanChannel(ch);
-  }
-  console.log(`✅ === CRON TAMAMLANDI ===`);
-}
-
-// Her 5 dakikada bir otomatik çalışsın
-main();
-setInterval(main, 5 * 60 * 1000);
-
+console.log(`=== CRON TAMAMLANDI (${new Date().toLocaleString("tr-TR")}) ===`);
