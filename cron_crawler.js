@@ -10,6 +10,7 @@ async function scanChannel(url) {
   console.log(`🔍 Kanal taranıyor: ${url}`);
   try {
     const res = await axios.get(url);
+    console.log("📄 Sayfa içeriği (ilk 1000 karakter):", res.data.substring(0,1000));
     const $ = cheerio.load(res.data);
     const posts = []; // ✅ Tanımlama buraya taşındı
 
@@ -58,3 +59,4 @@ async function main() {
 // Her 5 dakikada bir otomatik çalışsın
 main();
 setInterval(main, 5 * 60 * 1000);
+
