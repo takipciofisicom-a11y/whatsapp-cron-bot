@@ -1,29 +1,24 @@
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
 import axios from "axios";
+import * as cheerio from "cheerio";
 
-const PUSH_URL = process.env.PUSH_URL;
-
-// Tarayacağın kanalları buraya ekle:
+const PUSH_URL = process.env.PUSH_URL || "https://wpkanal.site/push_post.php";
 const CHANNELS = [
   "https://www.whatsapp.com/channel/0029VbBP35F0VycEVdmqmN3w"
 ];
 
-async function crawlChannel(url) {
-  console.log(`\n🔍 Kanal taranıyor: ${url}`);
-
+async function scanChannel(url) {
+  console.log(`🔍 Kanal taranıyor: ${url}`);
   try {
-    const response = await fetch(url);
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    const res = await axios.get(url);
+    const $ = cheerio.load(res.data);
+    const posts = []; // ✅ Tanımlama buraya taşındı
 
     $("a[href*='/channel/']").each((_, el) => {
-  const link = $(el).attr("href");
-  if (link && link.startsWith("/channel/")) {
-    posts.push(`https://www.whatsapp.com${link}`);
-  }
-});
-
+      const link = $(el).attr("href");
+      if (link && link.startsWith("/channel/")) {
+        posts.push(`https://www.whatsapp.com${link}`);
+      }
+    });
 
     if (posts.length === 0) {
       console.log(`⚠️ Gönderi bulunamadı: ${url}`);
@@ -32,39 +27,34 @@ async function crawlChannel(url) {
 
     console.log(`🟢 ${posts.length} gönderi bulundu.`);
 
-    for (const post of posts) {
-      const fullUrl = post.startsWith("http") ? post : `https://www.whatsapp.com${post}`;
-      console.log(`📤 Push gönderiliyor: ${fullUrl}`);
-
+    // Her gönderiyi PHP'ye pushla
+    for (const p of posts) {
       try {
-        const res = await axios.post(PUSH_URL, {
-          external_id: fullUrl,
-          key: "3424342343423efwefsddwedwerwerwefedsfsdf"
+        const pushRes = await axios.post(PUSH_URL, {
+          key: "3424342343423efwefsddwedwerwerwefedsfsdf", // config.php ile aynı olmalı
+          external_id: p,
+          channel: url,
+          content: "auto-fetched"
         });
-        console.log(`✅ Push sonucu (${fullUrl}): ${JSON.stringify(res.data)}`);
-      } catch (err) {
-        console.error(`❌ Push hatası (${fullUrl}): ${err.message}`);
+        console.log(`📤 Push sonucu (${p}):`, JSON.stringify(pushRes.data));
+      } catch (pushErr) {
+        console.log(`❌ Push hatası (${p}):`, pushErr.message);
       }
     }
 
   } catch (err) {
-    console.error(`❌ Kanal alınamadı (${url}): ${err.message}`);
+    console.log(`⚠️ Kanal içeriği alınamadı: ${url}`, err.message);
   }
 }
 
 async function main() {
-  console.log(`\n=== 🔄 CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
-  for (const channel of CHANNELS) {
-    await crawlChannel(channel);
+  console.log(`=== CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
+  for (const ch of CHANNELS) {
+    await scanChannel(ch);
   }
-  console.log(`=== ✅ CRON TAMAMLANDI ===\n`);
+  console.log(`✅ === CRON TAMAMLANDI ===`);
 }
 
+// Her 5 dakikada bir otomatik çalışsın
 main();
-
-// 5 dakikada bir otomatik çalışsın
-setInterval(() => {
-  console.log("⏱️ 5 dakika geçti — yeni tarama başlatılıyor...");
-  main();
-}, 5 * 60 * 1000);
-
+setInterval(main, 5 * 60 * 1000);
