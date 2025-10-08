@@ -1,20 +1,22 @@
 import fetch from "node-fetch";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 import axios from "axios";
 
 const PUSH_URL = process.env.PUSH_URL;
+
+// Tarayacağın kanalları buraya ekle:
 const CHANNELS = [
-  "https://www.whatsapp.com/channel/0029VbBP35F0VycEVdmqmN3w", // kanal linkin
+  "https://www.whatsapp.com/channel/0029VbBP35F0VycEVdmqmN3w"
 ];
 
 async function crawlChannel(url) {
-  console.log(`🔍 Kanal taranıyor: ${url}`);
+  console.log(`\n🔍 Kanal taranıyor: ${url}`);
+
   try {
     const response = await fetch(url);
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    // Gönderileri tespit et
     const posts = [];
     $("a[href*='/channel/']").each((_, el) => {
       const link = $(el).attr("href");
@@ -30,39 +32,38 @@ async function crawlChannel(url) {
 
     console.log(`🟢 ${posts.length} gönderi bulundu.`);
 
-    // Her gönderiyi backend’e gönder
     for (const post of posts) {
       const fullUrl = post.startsWith("http") ? post : `https://www.whatsapp.com${post}`;
       console.log(`📤 Push gönderiliyor: ${fullUrl}`);
+
       try {
         const res = await axios.post(PUSH_URL, {
           external_id: fullUrl,
           key: "3424342343423efwefsddwedwerwerwefedsfsdf"
         });
-        console.log(`✅ Push sonucu: ${fullUrl} → ${JSON.stringify(res.data)}`);
+        console.log(`✅ Push sonucu (${fullUrl}): ${JSON.stringify(res.data)}`);
       } catch (err) {
-        console.error(`❌ Push hatası: ${fullUrl} → ${err.message}`);
+        console.error(`❌ Push hatası (${fullUrl}): ${err.message}`);
       }
     }
 
   } catch (err) {
-    console.error(`❌ Kanal alınamadı (${url}):`, err.message);
+    console.error(`❌ Kanal alınamadı (${url}): ${err.message}`);
   }
 }
 
 async function main() {
-  console.log("=== 🔄 CRON BAŞLADI ===");
+  console.log(`\n=== 🔄 CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
   for (const channel of CHANNELS) {
     await crawlChannel(channel);
   }
-  console.log("=== ✅ CRON TAMAMLANDI ===");
+  console.log(`=== ✅ CRON TAMAMLANDI ===\n`);
 }
 
-// İlk çalıştırma
 main();
 
-// Her 5 dakikada bir tekrar et
+// 5 dakikada bir otomatik çalışsın
 setInterval(() => {
-  console.log("⏱️ 5 dakikalık cron tetiklendi, tekrar tarama başlatılıyor...");
+  console.log("⏱️ 5 dakika geçti — yeni tarama başlatılıyor...");
   main();
 }, 5 * 60 * 1000);
