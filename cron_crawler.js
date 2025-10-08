@@ -17,13 +17,13 @@ async function crawlChannel(url) {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const posts = [];
     $("a[href*='/channel/']").each((_, el) => {
-      const link = $(el).attr("href");
-      if (link && link.includes("/channel/")) {
-        posts.push(link);
-      }
-    });
+  const link = $(el).attr("href");
+  if (link && link.startsWith("/channel/")) {
+    posts.push(`https://www.whatsapp.com${link}`);
+  }
+});
+
 
     if (posts.length === 0) {
       console.log(`⚠️ Gönderi bulunamadı: ${url}`);
@@ -67,3 +67,4 @@ setInterval(() => {
   console.log("⏱️ 5 dakika geçti — yeni tarama başlatılıyor...");
   main();
 }, 5 * 60 * 1000);
+
