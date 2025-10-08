@@ -1,70 +1,68 @@
 import fetch from "node-fetch";
-import * as cheerio from "cheerio";
+import cheerio from "cheerio";
+import axios from "axios";
 
-// 🌐 PHP push endpoint (Render Environment'da ayarladığın değişken)
-const PUSH_URL = process.env.PUSH_URL || "https://wpkanal.site/push_post.php";
-
-// 🔁 Basit kanal listesi
+const PUSH_URL = process.env.PUSH_URL;
 const CHANNELS = [
-  "https://www.whatsapp.com/channel/0029VbBP35F0VycEVdmqmN3w"
+  "https://www.whatsapp.com/channel/0029VbBP35F0VycEVdmqmN3w", // kanal linkin
 ];
 
-// 🧩 Yardımcı: PHP sunucusuna post ekleme isteği
-async function pushToServer(link) {
+async function crawlChannel(url) {
+  console.log(`🔍 Kanal taranıyor: ${url}`);
   try {
-    const res = await fetch(PUSH_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        key: "3424342343423efwefsddwedwerwerwefedsfsdf", // config.php içindeki inbound_api_key
-        external_id: link,
-        channel: "auto",
-        content: "cron_push"
-      })
-    });
-    const text = await res.text();
-    console.log(`📨 Push sonucu (${link}):`, text);
-  } catch (err) {
-    console.error("❌ Push hatası:", err.message);
-  }
-}
+    const response = await fetch(url);
+    const html = await response.text();
+    const $ = cheerio.load(html);
 
-// 🔍 Kanal tarama fonksiyonu
-async function checkChannels() {
-  for (const url of CHANNELS) {
-    console.log("🔍 Kanal taranıyor:", url);
-    try {
-      const resp = await fetch(url);
-      const html = await resp.text();
-      const $ = cheerio.load(html);
-
-      const links = [];
-      $("a").each((_, el) => {
-        const href = $(el).attr("href");
-        if (href && href.startsWith("https://whatsapp.com/channel/")) {
-          links.push(href);
-        }
-      });
-
-      if (links.length === 0) {
-        console.log("⚠️ Gönderi bulunamadı:", url);
-      } else {
-        console.log(`🎯 ${links.length} gönderi bulundu.`);
-        for (const link of links) {
-          await pushToServer(link);
-        }
+    // Gönderileri tespit et
+    const posts = [];
+    $("a[href*='/channel/']").each((_, el) => {
+      const link = $(el).attr("href");
+      if (link && link.includes("/channel/")) {
+        posts.push(link);
       }
-    } catch (e) {
-      console.error("🚨 Kanal tarama hatası:", e.message);
+    });
+
+    if (posts.length === 0) {
+      console.log(`⚠️ Gönderi bulunamadı: ${url}`);
+      return;
     }
+
+    console.log(`🟢 ${posts.length} gönderi bulundu.`);
+
+    // Her gönderiyi backend’e gönder
+    for (const post of posts) {
+      const fullUrl = post.startsWith("http") ? post : `https://www.whatsapp.com${post}`;
+      console.log(`📤 Push gönderiliyor: ${fullUrl}`);
+      try {
+        const res = await axios.post(PUSH_URL, {
+          external_id: fullUrl,
+          key: "3424342343423efwefsddwedwerwerwefedsfsdf"
+        });
+        console.log(`✅ Push sonucu: ${fullUrl} → ${JSON.stringify(res.data)}`);
+      } catch (err) {
+        console.error(`❌ Push hatası: ${fullUrl} → ${err.message}`);
+      }
+    }
+
+  } catch (err) {
+    console.error(`❌ Kanal alınamadı (${url}):`, err.message);
   }
 }
 
-// 🧪 Test gönderisi (manuel kontrol)
-await pushToServer("https://whatsapp.com/channel/0029VbBP35F0VycEVdmqmN3w/999");
-console.log("📤 Test gönderisi gönderildi, şimdi normal tarama başlıyor...\n");
+async function main() {
+  console.log("=== 🔄 CRON BAŞLADI ===");
+  for (const channel of CHANNELS) {
+    await crawlChannel(channel);
+  }
+  console.log("=== ✅ CRON TAMAMLANDI ===");
+}
 
-// ⏰ Asıl cron işlemi
-await checkChannels();
+// İlk çalıştırma
+main();
 
-console.log("✅ Tarama tamamlandı.");
+// Her 5 dakikada bir tekrar et
+setInterval(() => {
+  console.log("⏱️ 5 dakikalık cron tetiklendi, tekrar tarama başlatılıyor...");
+  main();
+}, 5 * 60 * 1000);
