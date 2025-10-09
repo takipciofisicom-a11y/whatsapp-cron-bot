@@ -2,7 +2,8 @@ import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import axios from "axios";
 
-const channelUrl = process.env.CHANNEL_URL;
+const tasksUrl = process.env.TASKS_URL;
+const apiKey = process.env.API_KEY;
 const pushUrl = process.env.PUSH_URL;
 const pushKey = process.env.PUSH_KEY;
 
@@ -10,6 +11,18 @@ console.log(`=== CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
 console.log(`🔍 Kanal taranıyor: ${channelUrl}`);
 
 try {
+  // Admin panelden aktif görevleri çek
+const taskResponse = await axios.get(`${tasksUrl}?key=${apiKey}`);
+const tasks = taskResponse.data;
+
+for (const task of tasks) {
+  const channelUrl = task.channel_url;
+  const pushKey = task.push_key;
+
+  console.log(`🔍 Kanal taranıyor: ${channelUrl}`);
+
+  // ... burada senin mevcut tarama kodun devreye girecek
+}
   const executablePath = await chromium.executablePath();
 
   const browser = await puppeteer.launch({
@@ -55,4 +68,5 @@ await new Promise(resolve => setTimeout(resolve, 3000));
 }
 
 console.log(`=== CRON TAMAMLANDI (${new Date().toLocaleString("tr-TR")}) ===`);
+
 
