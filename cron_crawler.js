@@ -21,7 +21,7 @@ try {
 
   const page = await browser.newPage();
   await page.goto(channelUrl, { waitUntil: "networkidle2", timeout: 60000 });
-  await page.waitForTimeout(5000);
+await new Promise(resolve => setTimeout(resolve, 3000));
 
   const posts = await page.evaluate(() => {
     const anchors = Array.from(document.querySelectorAll("a"));
@@ -55,3 +55,4 @@ try {
 }
 
 console.log(`=== CRON TAMAMLANDI (${new Date().toLocaleString("tr-TR")}) ===`);
+
