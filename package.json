@@ -1,11 +1,13 @@
 {
-  "type": "module",
+  "name": "whatsapp-cron-bot",
+  "version": "1.0.0",
+  "description": "WhatsApp kanal tarayıcı cron (fallback simulate)",
+  "main": "cron_crawler.js",
   "scripts": {
     "start": "node cron_crawler.js"
   },
   "dependencies": {
-  "puppeteer-core": "^23.4.1",
-  "@sparticuz/chromium": "^126.0.0",
-  "axios": "^1.6.8"
-}
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12"
+  }
 }
