@@ -6,7 +6,10 @@ const tasksUrl = process.env.TASKS_URL; // Örnek: https://wpkanal.site/admin/ge
 const pushUrl = process.env.PUSH_URL;
 
 console.log(`=== CRON BAŞLADI (${new Date().toLocaleString("tr-TR")}) ===`);
-
+const browser = await puppeteer.launch({
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  headless: true
+});
 try {
   console.log(`🛰️ Görevler çekiliyor: ${tasksUrl}`);
   const response = await axios.get(tasksUrl);
@@ -69,3 +72,4 @@ try {
 }
 
 console.log(`=== CRON TAMAMLANDI (${new Date().toLocaleString("tr-TR")}) ===`);
+
